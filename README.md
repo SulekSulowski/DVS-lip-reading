@@ -21,6 +21,7 @@ Datasets: **DVS-Lip** and **DVS-LRW100**
 ### 3. Selection of Methods for Further Work
 
 - Spatiotemporal Feature Enhancement Based on Event Cameras
+- Spatiotemporal Feature Enhancement Based on Spiking Neural Networks
 
 ### 4. Plan for the Next Milestone
 

@@ -8,6 +8,7 @@
 
 ### 1. Literature Review
 
+- [Automatic visual lip reading: A comparative review of machine-learning approaches](https://www.sciencedirect.com/science/article/pii/S2590123025032268)
 - [Sensors & Cameras – MDPI 2025](https://www.mdpi.com/2076-3417/15/8/4142)
 - [DVS-LRW100 – ACM 2025](https://dl.acm.org/doi/pdf/10.1145/3746027.3755404)
 - [Multi-grained Spatio-Temporal Features for Event-based Lip-Reading – ResearchGate](https://www.researchgate.net/publication/363909140_Multi-grained_Spatio-Temporal_Features_Perceived_Network_for_Event-based_Lip-Reading)

@@ -17,6 +17,7 @@
 Datasets: **DVS-Lip** and **DVS-LRW100**
 
 - [Event-based Lipreading – project page](https://sites.google.com/view/event-based-lipreading)
+- [The Oxford-BBC Lip Reading in the Wild (LRW) Dataset](https://www.robots.ox.ac.uk/~vgg/data/lip_reading/lrw1.html)
 
 ### 3. Selection of Methods for Further Work
 

@@ -11,6 +11,7 @@ Repostiroy for DVS lip reading project
   <li>overview of available datasets: DVS-Lip and DVS-LRW100:</li>
     <lo>https://sites.google.com/view/event-based-lipreading</lo>
   <li>selection of methods for further work</li>
+    <lo>Spatiotemporal Feature Enhancement Based on Event Cameras</lo>
   <li>plan for the next milestone</li>
 </ol>
 

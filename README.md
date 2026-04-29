@@ -24,4 +24,3 @@ Datasets: **DVS-Lip** and **DVS-LRW100**
 
 ### 4. Plan for the Next Milestone
 
-- [ ] *(to be defined)*

@@ -14,15 +14,16 @@
 
 ### 2. Overview of Available Datasets
 
-Datasets: **DVS-Lip** and **DVS-LRW100**
+Datasets: **DVS-Lip** and **DVS-LRW**
 
 - [Event-based Lipreading – project page](https://sites.google.com/view/event-based-lipreading)
 - [The Oxford-BBC Lip Reading in the Wild (LRW) Dataset](https://www.robots.ox.ac.uk/~vgg/data/lip_reading/lrw1.html)
 
 ### 3. Selection of Methods for Further Work
 
-- Spatiotemporal Feature Enhancement Based on Event Cameras
+- Spatiotemporal Feature Enhancement Based on Convolutional Neural Networks
 - Spatiotemporal Feature Enhancement Based on Spiking Neural Networks
+- Spatiotemporal Feature Enhancement Based on Graph Convolutional Neural Networks
 
 ### 4. Plan for the Next Milestone
 

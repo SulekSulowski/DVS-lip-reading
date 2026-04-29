@@ -23,7 +23,7 @@ Datasets: **DVS-Lip** and **DVS-LRW**
 
 - Spatiotemporal Feature Enhancement Based on Convolutional Neural Networks
 - Spatiotemporal Feature Enhancement Based on Spiking Neural Networks
-- Spatiotemporal Feature Enhancement Based on Graph Convolutional Neural Networks
+- Spatiotemporal Feature Enhancement Based on Graph Neural Networks
 
 ### 4. Plan for the Next Milestone
 

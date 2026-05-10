@@ -27,4 +27,10 @@ Datasets: **DVS-Lip** and **DVS-LRW**
 - Spatiotemporal Feature Enhancement Based on Graph Neural Networks
 
 ### 4. Plan for the Next Milestone
+- Visualize data from DVS-Lip dataset (DVS-LRW 100 dataset is not publicly available so we can't compare them) - Jakub Sulowski
+- Search for more articles about DVS lip reading and add it to literature - Szczepan Tokarczyk
+- Add more approaches of work methods (currently it is too general) - Miłosz Senator
+- Select method that we will use in our project and describe it shortly - Jakub Sulowski
+- Add goal of the project, short description and what we want to achieve at the begin of readme file - Szczepan Tokarczyk and Miłosz Senator
+
 

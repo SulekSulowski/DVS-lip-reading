@@ -4,7 +4,7 @@
 
 ---
 
-## Tasks due 6th May
+## 6th May
 
 ### 1. Literature Review
 
@@ -33,4 +33,8 @@ Datasets: **DVS-Lip** and **DVS-LRW**
 - Select method that we will use in our project and describe it shortly - Jakub Sulowski
 - Add goal of the project, short description and what we want to achieve at the begin of readme file - Szczepan Tokarczyk and Miłosz Senator
 
+
+---
+
+## 13th May
 

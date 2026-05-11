@@ -91,9 +91,35 @@ For this project we focus exclusively on **DVS-Lip**, as DVS-LRW100 is not publi
 
 ### 3. Selection of Methods for Further Work
 
-- Spatiotemporal Feature Enhancement Based on Convolutional Neural Networks
-- Spatiotemporal Feature Enhancement Based on Spiking Neural Networks
-- Spatiotemporal Feature Enhancement Based on Graph Neural Networks
+- **Spatiotemporal Feature Enhancement Based on Convolutional Neural Networks**  
+  Convert event streams into frame-like voxel grids or event images and use 2D/3D CNNs to learn local motion and appearance patterns from lip movements.
+
+- **Spatiotemporal Feature Enhancement Based on Spiking Neural Networks**  
+  Use biologically inspired spike-based neurons that naturally process asynchronous DVS events with low latency and energy efficiency.
+
+- **Spatiotemporal Feature Enhancement Based on Graph Neural Networks**  
+  Represent events as nodes connected in space and time, then apply graph message passing to model dynamic lip motion relationships.
+
+- **Transformer-Based Sequence Modeling**  
+  Use self-attention mechanisms to capture long-range temporal dependencies between lip motion events across the whole sequence.
+
+- **Hypergraph Neural Networks**  
+  Extend standard graphs by connecting multiple related events in one hyperedge, enabling modeling of higher-order spatial and temporal interactions.
+
+- **Mamba / State Space Models for Temporal Modeling**  
+  Efficient sequence models designed for long event streams, offering lower computational cost than Transformers while preserving temporal context.
+
+- **Hybrid CNN + GNN Architectures**  
+  Combine CNN feature extraction on voxelized frames with GNN reasoning over event relations to exploit both dense and sparse representations.
+
+- **Frequency-Domain Feature Enhancement**  
+  Transform temporal event signals into spectral space to emphasize repetitive motion patterns and suppress noise.
+
+- **Multiview / Multi-Granularity Temporal Aggregation**  
+  Learn features at different temporal resolutions (short-term and long-term motion) and combine them for better recognition accuracy.
+
+- **Contrastive / Self-Supervised Pretraining**  
+  Pretrain encoders on unlabeled event streams using representation learning, then fine-tune on the lip reading classification task.
 
 ---
 

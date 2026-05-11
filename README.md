@@ -26,6 +26,8 @@ event-camera lip reading benchmark.
 [DVS-Lip](https://sites.google.com/view/event-based-lipreading) - 100 words,
 40 speakers, recorded with a DAVIS346 event camera.
 
+---
+
 ## 1. Literature Review
 
 ### 1.1 General lip reading surveys
@@ -38,7 +40,7 @@ cameras fit in the larger field.
 - [Spatiotemporal Feature Enhancement for Lip-Reading: A Survey](https://www.mdpi.com/2076-3417/15/8/4142) 
 - [Tackling Event-Based Lip-Reading by Exploring Multigrained Spatiotemporal Clues](https://ieeexplore.ieee.org/document/10682067) 
 - [Vision based Lip Reading System using Deep Learning](https://ieeexplore.ieee.org/document/9776430) 
----
+
 
 ### 1.2 Event-based lip reading methods
 
@@ -53,7 +55,6 @@ Frequency-Aware Spatiotemporal Hypergraph Modeling ](https://dl.acm.org/doi/pdf/
 - [Semantics-aware high-frequency enhancement for event-based lip-reading](https://www.sciencedirect.com/science/article/pii/S0020025525011636) 
 - [NeuroLip: Event-driven Spatiotemporal Learning for Lip-Motion VSR](https://arxiv.org/abs/2604.15718) 
 
----
 
 ### 1.3 Graph neural networks for event-based vision
 
@@ -66,7 +67,6 @@ event data in adjacent tasks (gesture/action recognition).
 - [Event-Stream Representation for Human Gaits Identification Using Deep Neural Networks](https://ieeexplore.ieee.org/document/9337225) 
 - [Hypergraph-based Multi-View Action Recognition using Event Cameras](https://arxiv.org/abs/2403.19316) 
 
----
 
 ### 1.4 Complementary methods 
 
@@ -75,7 +75,7 @@ Alternative or supporting approaches relevant to spatiotemporal feature enhancem
 - [Intelligent event-based lip reading word classification with spiking neural networks using spatio-temporal attention features and triplet loss](https://www.sciencedirect.com/science/article/pii/S0020025524005735) 
 - [Spectrum-guided Spatial Feature Enhancement Network for event-based lip-reading](https://www.sciencedirect.com/science/article/pii/S0925231225006460) 
 
-
+---
 
 ## 2. Datasets
 
@@ -88,6 +88,7 @@ For this project we focus exclusively on **DVS-Lip**, as DVS-LRW100 is not publi
 
 **DVS-LRW** - [RGB Dataset](https://www.robots.ox.ac.uk/~vgg/data/lip_reading/lrw1.html)
 
+---
 
 ## 3. Selection of Methods for Further Work
 
@@ -120,6 +121,50 @@ For this project we focus exclusively on **DVS-Lip**, as DVS-LRW100 is not publi
 
 - **Contrastive / Self-Supervised Pretraining**  
   Pretrain encoders on unlabeled event streams using representation learning, then fine-tune on the lip reading classification task.
+
+---
+
+## 4. Selected Approach
+
+### 4.1 Overview
+
+We build directly on the graph-based event processing framework introduced in the
+course labs (GNN) and extend it in two ways:
+
+1. **From single-graph classification to sequence modeling** - DVS-Lip samples are
+   full word utterances (0.5–1 s), so we decompose each sample into a sequence of
+   fixed-duration sliding windows. Each window produces one graph, processed by a
+   shared GNN frontend. The resulting sequence of per-window embeddings is passed to
+   a [Bi-GRU [7]](https://arxiv.org/pdf/2404.11979) for temporal modeling.
+
+2. **Replacing PointNetConv with** [EdgeConv (DGCNN)[15]](https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.EdgeConv.html) - unlike PointNetConv, which
+   builds messages from raw coordinates `[x_j || p_j − p_i]`, EdgeConv recomputes
+   the k-nearest-neighbor graph in *feature space* at each layer: `[x_j || x_i − x_j]`.
+   This makes later layers sensitive to learned feature similarity, not just spatial
+   proximity - better suited for capturing lip shape dynamics across layers.
+
+### 4.2 Starting point: lab code
+
+The `GraphGen`, `PointNetConv`, and `GraphPoolOut2D` classes from the course lab
+GNN serve as our implementation baseline. The
+following modifications are required to adapt them to DVS-Lip:
+
+| Component | Lab version | Project version |
+|---|---|---|
+| `GraphGen` | single sample, reset per call | wrapped in sliding-window loop |
+| `PointNetConv` | used as-is | optionally replaced by `EdgeConv` (PyG) |
+| `GraphPoolOut2D` | 2D spatial pooling → flat vector | replaced by global max-pool → embedding |
+| `GCN.linear` | `→ 10 classes` | `→ 100 classes` |
+| temporal modeling | none (single graph) | Bi-GRU over window sequence |
+
+### 4.3 Ablation plan
+
+| Variant | Spatial conv | Temporal | Notes |
+|---|---|---|---|
+| **Baseline** | PointNetConv (lab) | Bi-GRU | Minimal change from lab code |
+| **DGCNN** | EdgeConv (PyG) | Bi-GRU | Main proposed method |
+| **DGCNN + GAT** | EdgeConv + GATConv | Bi-GRU | Attention ablation |
+| **DGCNN + Transformer** | EdgeConv (PyG) | Transformer | Temporal ablation |
 
 ---
 

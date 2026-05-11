@@ -89,7 +89,7 @@ For this project we focus exclusively on **DVS-Lip**, as DVS-LRW100 is not publi
 **DVS-LRW** - [RGB Dataset](https://www.robots.ox.ac.uk/~vgg/data/lip_reading/lrw1.html)
 
 
-### 3. Selection of Methods for Further Work
+## 3. Selection of Methods for Further Work
 
 - **Spatiotemporal Feature Enhancement Based on Convolutional Neural Networks**  
   Convert event streams into frame-like voxel grids or event images and use 2D/3D CNNs to learn local motion and appearance patterns from lip movements.

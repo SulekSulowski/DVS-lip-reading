@@ -36,25 +36,25 @@ These papers provide a broad overview of automatic lip reading (ALR) methods, co
 both classical and deep learning approaches, and contextualize where event-based
 cameras fit in the larger field.
 
-- [Automatic visual lip reading: A comparative review of machine-learning approaches](https://www.sciencedirect.com/science/article/pii/S2590123025032268) 
-- [Spatiotemporal Feature Enhancement for Lip-Reading: A Survey](https://www.mdpi.com/2076-3417/15/8/4142) 
-- [Tackling Event-Based Lip-Reading by Exploring Multigrained Spatiotemporal Clues](https://ieeexplore.ieee.org/document/10682067) 
-- [Vision based Lip Reading System using Deep Learning](https://ieeexplore.ieee.org/document/9776430) 
-
+- [Automatic visual lip reading: A comparative review of machine-learning approaches [1]](https://www.sciencedirect.com/science/article/pii/S2590123025032268) 
+- [Spatiotemporal Feature Enhancement for Lip-Reading: A Survey [2]](https://www.mdpi.com/2076-3417/15/8/4142) 
+- [Tackling Event-Based Lip-Reading by Exploring Multigrained Spatiotemporal Clues [3]](https://ieeexplore.ieee.org/document/10682067) 
+- [Vision based Lip Reading System using Deep Learning [4]](https://ieeexplore.ieee.org/document/9776430) 
+---
 
 ### 1.2 Event-based lip reading methods
 
 Papers directly tackling lip reading with Dynamic Vision Sensors (DVS).
 
 
-- [Multi-grained Spatio-Temporal Features Perceived Network for Event-based Lip-Reading](https://openaccess.thecvf.com/content/CVPR2022/papers/Tan_Multi-Grained_Spatio-Temporal_Features_Perceived_Network_for_Event-Based_Lip-Reading_CVPR_2022_paper.pdf) 
-- [EventLip: Enhancing Event-Based Lip Reading via
-Frequency-Aware Spatiotemporal Hypergraph Modeling ](https://dl.acm.org/doi/pdf/10.1145/3746027.3755404) 
-- [MTGA: Multi-View Temporal Granularity Aligned Aggregation](https://arxiv.org/pdf/2404.11979) 
-- [Mamba-Based Temporal Modeling for Event-Based Lip Reading](https://ieeexplore.ieee.org/document/11085858) 
-- [Semantics-aware high-frequency enhancement for event-based lip-reading](https://www.sciencedirect.com/science/article/pii/S0020025525011636) 
-- [NeuroLip: Event-driven Spatiotemporal Learning for Lip-Motion VSR](https://arxiv.org/abs/2604.15718) 
+- [Multi-grained Spatio-Temporal Features Perceived Network for Event-based Lip-Reading [5]](https://openaccess.thecvf.com/content/CVPR2022/papers/Tan_Multi-Grained_Spatio-Temporal_Features_Perceived_Network_for_Event-Based_Lip-Reading_CVPR_2022_paper.pdf) 
+- [EventLip: Enhancing Event-Based Lip Reading via Frequency-Aware Spatiotemporal Hypergraph Modeling [6]](https://dl.acm.org/doi/pdf/10.1145/3746027.3755404) 
+- [MTGA: Multi-View Temporal Granularity Aligned Aggregation [7]](https://arxiv.org/pdf/2404.11979) 
+- [Mamba-Based Temporal Modeling for Event-Based Lip Reading [8]](https://ieeexplore.ieee.org/document/11085858) 
+- [Semantics-aware high-frequency enhancement for event-based lip-reading [9]](https://www.sciencedirect.com/science/article/pii/S0020025525011636) 
+- [NeuroLip: Event-driven Spatiotemporal Learning for Lip-Motion VSR [10]](https://arxiv.org/abs/2604.15718) 
 
+---
 
 ### 1.3 Graph neural networks for event-based vision
 
@@ -62,18 +62,20 @@ These methods form the theoretical backbone for graph-based approaches we plan t
 explore. They show how GNNs, GATs, and hypergraph networks handle spatio-temporal
 event data in adjacent tasks (gesture/action recognition).
 
-- [Space-Time Event Clouds for Gesture Recognition: From RGB Cameras to Event Cameras](https://ieeexplore.ieee.org/document/8659288)  
-- [Graph-Based Spatio-Temporal Feature Learning for Neuromorphic Vision Sensing](https://ieeexplore.ieee.org/document/9199543) 
-- [Event-Stream Representation for Human Gaits Identification Using Deep Neural Networks](https://ieeexplore.ieee.org/document/9337225) 
-- [Hypergraph-based Multi-View Action Recognition using Event Cameras](https://arxiv.org/abs/2403.19316) 
+- [Space-Time Event Clouds for Gesture Recognition: From RGB Cameras to Event Cameras [11]](https://ieeexplore.ieee.org/document/8659288)  
+- [Graph-Based Spatio-Temporal Feature Learning for Neuromorphic Vision Sensing [12]](https://ieeexplore.ieee.org/document/9199543) 
+- [Event-Stream Representation for Human Gaits Identification Using Deep Neural Networks [13]](https://ieeexplore.ieee.org/document/9337225) 
+- [Hypergraph-based Multi-View Action Recognition using Event Cameras [14]](https://arxiv.org/abs/2403.19316) 
+- [Dynamic Graph CNN for Learning on Point Clouds [15]](https://arxiv.org/pdf/1801.07829)
 
+---
 
 ### 1.4 Complementary methods 
 
 Alternative or supporting approaches relevant to spatiotemporal feature enhancement.
 
-- [Intelligent event-based lip reading word classification with spiking neural networks using spatio-temporal attention features and triplet loss](https://www.sciencedirect.com/science/article/pii/S0020025524005735) 
-- [Spectrum-guided Spatial Feature Enhancement Network for event-based lip-reading](https://www.sciencedirect.com/science/article/pii/S0925231225006460) 
+- [Intelligent event-based lip reading word classification with spiking neural networks using spatio-temporal attention features and triplet loss [16]](https://www.sciencedirect.com/science/article/pii/S0020025524005735) 
+- [Spectrum-guided Spatial Feature Enhancement Network for event-based lip-reading [17]](https://www.sciencedirect.com/science/article/pii/S0925231225006460) 
 
 ---
 

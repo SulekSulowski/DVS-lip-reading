@@ -187,6 +187,6 @@ following modifications are required to adapt them to DVS-Lip:
 
 
 ### Plan for the Next Milestone
-- Prepare architecture of whole pipeline - Miłosz Senator and Szczepan Tokarczyk
+- Prepare architecture and description of whole pipeline - Miłosz Senator and Szczepan Tokarczyk
 - Implement solution in python - Jakub Sulowski
 

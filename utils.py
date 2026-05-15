@@ -12,6 +12,7 @@ from tqdm import tqdm
 from torch_geometric.nn import EdgeConv
 from torch_geometric.nn import global_max_pool
 from torch_geometric.nn.pool import knn_graph
+from torch_geometric.data import Data
 from torch.utils.data import Dataset, DataLoader
 
 
@@ -82,7 +83,34 @@ def draw_graph(pos, edges, dimension_XY, size=10, elev=30, azim=35):
     plt.tight_layout()
     plt.show()
 
+def build_graph_sequence(time, x, y, p, window_size, r, dimension_XY=128, device='cpu'):
+    
+    windows = split_into_windows(time, x, y, p, window_size)
+    graph_gen = GraphGen(r=r, dimension_XY=dimension_XY, device=device)
+    
+    graph_sequence = []
 
+    for window in windows:
+        events = torch.tensor(
+            np.stack([window['x'], window['y'], window['time'], window['p']], axis=1),
+            dtype=torch.float32,
+            device=device
+        )
+
+        node_features, pos, edges = graph_gen(events)
+
+        if len(node_features) < 2:  # puste lub za małe okno — pomiń
+            continue
+
+        data = Data(
+            x=node_features,                    # [N, 4]
+            edge_index=edges.t().contiguous(),  # [2, E] — PyG wymaga tego formatu
+            pos=pos                             # [N, 3] opcjonalnie
+        )
+
+        graph_sequence.append(data)
+
+    return graph_sequence
 
 
 
@@ -242,7 +270,7 @@ class TemporalBiGRU(nn.Module):
     def __init__(
         self,
         input_dim=256,
-        hidden_dim=128,
+        hidden_dim=256,
         num_layers=2,
         dropout=0.3
     ):
@@ -303,7 +331,7 @@ class EventLipReadingNet(nn.Module):
 
         self.classifier = nn.Sequential(
 
-            nn.Linear(256, 256),
+            nn.Linear(512, 256),
 
             nn.ReLU(),
 
@@ -364,7 +392,7 @@ class EventLipReadingNet(nn.Module):
 
 
 class GraphGen(Module):
-    def __init__(self, r, dimension_XY=32, self_loop=True, device='cpu'):
+    def __init__(self, r, dimension_XY=128, self_loop=True, device='cuda'):
         super().__init__()
         self.r = r
         self.dimension_XY = dimension_XY
@@ -417,11 +445,19 @@ class GraphGen(Module):
             self.index += 1
 
         edge_list_dedup = list(dict.fromkeys(map(tuple, self.edge_list)))
+        pos = torch.tensor(self.pos_list, dtype=torch.float32, device=self.device)   # [N, 3] — float32!
+        pol = torch.tensor(self.feat_list, dtype=torch.float32, device=self.device).unsqueeze(1)  # [N, 1]
 
-        pos = torch.tensor(self.pos_list, dtype=torch.int32, device=self.device)
-        x = torch.tensor(self.feat_list, dtype=torch.float32, device=self.device).unsqueeze(1)
-        edges = torch.tensor(edge_list_dedup, dtype=torch.int32, device=self.device) \
-            if self.edge_list else torch.empty((0, 2), dtype=torch.int32, device=self.device)
+        # normalizacja t do skali [0, 128]
+        t_col = pos[:, 2]
+        t_min, t_max = t_col.min(), t_col.max()
+        pos[:, 2] = (t_col - t_min) / (t_max - t_min + 1e-8) * 127
+
+        x = torch.cat([pos, pol], dim=1)  # [N, 4] — gotowy tensor (x, y, t̃, p)
+
+        edges = torch.tensor(edge_list_dedup, dtype=torch.long, device=self.device) \
+            if self.edge_list else torch.empty((0, 2), dtype=torch.long, device=self.device)
+
         self.reset()
         return x, pos, edges
 

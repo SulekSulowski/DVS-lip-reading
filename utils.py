@@ -9,6 +9,45 @@ from torch.nn import    Linear, \
 import torch.nn.functional as F
 import math
 from tqdm import tqdm
+from torch_geometric.nn import EdgeConv
+from torch_geometric.nn import global_max_pool
+from torch_geometric.nn.pool import knn_graph
+from torch.utils.data import Dataset, DataLoader
+
+
+
+def load_data(root):
+    data = np.load(root)
+    time = data["t"]
+    x = data["x"]
+    y = data["y"]
+    p = data['p']
+
+    return time, x, y, p
+
+def split_into_windows(time, x, y, p, window_size):
+
+    windows = []
+
+    start_idx = 0
+    start_time = time[0]
+
+    for i in range(len(time)):
+
+        if time[i] - start_time >= window_size:
+
+            windows.append({
+                "time": time[start_idx:i],
+                "x": x[start_idx:i],
+                "y": y[start_idx:i],
+                "p": p[start_idx:i]
+            })
+
+            start_idx = i
+            start_time = time[i]
+
+    return windows
+
 
 def draw_graph(pos, edges, dimension_XY, size=10, elev=30, azim=35):
     pos_np = pos.numpy()
@@ -42,6 +81,286 @@ def draw_graph(pos, edges, dimension_XY, size=10, elev=30, azim=35):
     
     plt.tight_layout()
     plt.show()
+
+
+
+
+
+class DVSLipDataset(Dataset):
+
+    def __init__(self, samples):
+        """
+        samples:
+        list of (graph_sequence, label)
+
+        graph_sequence:
+        list of PyG Data objects
+        """
+        self.samples = samples
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        graphs, label = self.samples[idx]
+        return graphs, label
+
+
+# =========================================================
+# Collate function (IMPORTANT)
+# =========================================================
+
+def collate_fn(batch):
+    """
+    batch:
+    list of (graph_sequence, label)
+    """
+
+    graph_sequences = []
+    labels = []
+
+    for graphs, label in batch:
+        graph_sequences.append(graphs)
+        labels.append(label)
+
+    labels = torch.tensor(labels, dtype=torch.long)
+
+    return graph_sequences, labels
+
+
+# =========================================================
+# DataLoader
+# =========================================================
+
+def create_dataloader(samples, batch_size=1, shuffle=True):
+
+    dataset = DVSLipDataset(samples)
+
+    loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        collate_fn=collate_fn
+    )
+
+    return loader
+
+
+
+class DGCNN(nn.Module):
+
+    def __init__(self, k=16):
+
+        super().__init__()
+
+        self.k = k
+
+        # R^4 -> R^64
+        self.conv1 = EdgeConv(
+            nn.Sequential(
+                nn.Linear(2 * 4, 64),
+                nn.ReLU(),
+                nn.Linear(64, 64)
+            ),
+            aggr='max'
+        )
+
+        # R^64 -> R^128
+        self.conv2 = EdgeConv(
+            nn.Sequential(
+                nn.Linear(2 * 64, 128),
+                nn.ReLU(),
+                nn.Linear(128, 128)
+            ),
+            aggr='max'
+        )
+
+        # R^128 -> R^256
+        self.conv3 = EdgeConv(
+            nn.Sequential(
+                nn.Linear(2 * 128, 256),
+                nn.ReLU(),
+                nn.Linear(256, 256)
+            ),
+            aggr='max'
+        )
+
+    def forward(self, data):
+
+        x = data.x
+        edge_index = data.edge_index
+        batch = data.batch
+
+        # -------------------------------------------------
+        # Layer 1
+        # Initial radius graph from GraphGen
+        # -------------------------------------------------
+
+        x = self.conv1(x, edge_index)
+
+        # -------------------------------------------------
+        # Layer 2
+        # Dynamic graph in feature space
+        # -------------------------------------------------
+
+        edge_index = knn_graph(
+            x,
+            k=self.k,
+            batch=batch
+        )
+
+        x = self.conv2(x, edge_index)
+
+        # -------------------------------------------------
+        # Layer 3
+        # Dynamic graph in feature space
+        # -------------------------------------------------
+
+        edge_index = knn_graph(
+            x,
+            k=self.k,
+            batch=batch
+        )
+
+        x = self.conv3(x, edge_index)
+
+        # -------------------------------------------------
+        # Global pooling
+        # -------------------------------------------------
+
+        h = global_max_pool(x, batch)
+
+        return h
+
+
+# =========================================================
+# Temporal Module (BiGRU)
+# =========================================================
+
+class TemporalBiGRU(nn.Module):
+
+    def __init__(
+        self,
+        input_dim=256,
+        hidden_dim=128,
+        num_layers=2,
+        dropout=0.3
+    ):
+
+        super().__init__()
+
+        self.gru = nn.GRU(
+            input_size=input_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            batch_first=True,
+            bidirectional=True,
+            dropout=dropout
+        )
+
+    def forward(self, x):
+
+        """
+        x:
+        [batch_size, sequence_length, 256]
+        """
+
+        output, h_n = self.gru(x)
+
+        # last forward state
+        h_forward = h_n[-2]
+
+        # last backward state
+        h_backward = h_n[-1]
+
+        # concatenate directions
+        h = torch.cat(
+            [h_forward, h_backward],
+            dim=1
+        )
+
+        return h
+
+
+
+# =========================================================
+# Full Lip Reading Network
+# =========================================================
+
+class EventLipReadingNet(nn.Module):
+
+    def __init__(
+        self,
+        num_classes=100,
+        k=16
+    ):
+
+        super().__init__()
+
+        self.dgcnn = DGCNN(k=k)
+
+        self.temporal = TemporalBiGRU()
+
+        self.classifier = nn.Sequential(
+
+            nn.Linear(256, 256),
+
+            nn.ReLU(),
+
+            nn.Dropout(0.3),
+
+            nn.Linear(256, num_classes)
+        )
+
+    def forward(self, graph_sequence):
+
+        """
+        graph_sequence:
+        list of PyG graphs
+
+        Example:
+        [graph_1, graph_2, ..., graph_T]
+        """
+
+        embeddings = []
+
+        # -------------------------------------------------
+        # Process each graph independently with DGCNN
+        # -------------------------------------------------
+
+        for graph in graph_sequence:
+
+            h = self.dgcnn(graph)
+
+            embeddings.append(h)
+
+        # -------------------------------------------------
+        # Stack temporal sequence
+        # -------------------------------------------------
+
+        x = torch.stack(
+            embeddings,
+            dim=1
+        )
+
+        """
+        x shape:
+        [batch_size, sequence_length, 256]
+        """
+
+        # -------------------------------------------------
+        # Temporal modeling
+        # -------------------------------------------------
+
+        h = self.temporal(x)
+
+        # -------------------------------------------------
+        # Final classification
+        # -------------------------------------------------
+
+        logits = self.classifier(h)
+
+        return logits
 
 
 class GraphGen(Module):

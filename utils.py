@@ -83,7 +83,8 @@ def draw_graph(pos, edges, dimension_XY, size=10, elev=30, azim=35):
     plt.tight_layout()
     plt.show()
 
-def build_graph_sequence(time, x, y, p, window_size, r, dimension_XY=128, device='cpu'):
+
+def build_graph_sequence(time, x, y, p, window_size, r, dimension_XY=128, device='cuda'):
     
     windows = split_into_windows(time, x, y, p, window_size)
     graph_gen = GraphGen(r=r, dimension_XY=dimension_XY, device=device)
@@ -168,7 +169,8 @@ def create_dataloader(samples, batch_size=1, shuffle=True):
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        collate_fn=collate_fn
+        collate_fn=collate_fn,
+        num_workers=0
     )
 
     return loader
@@ -218,6 +220,9 @@ class DGCNN(nn.Module):
         x = data.x
         edge_index = data.edge_index
         batch = data.batch
+
+        if batch is None:
+            batch = torch.zeros(x.size(0), dtype=torch.long, device=x.device)
 
         # -------------------------------------------------
         # Layer 1

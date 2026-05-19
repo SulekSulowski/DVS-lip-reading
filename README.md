@@ -208,7 +208,7 @@ After the three EdgeConv layers, each node in the graph holds a feature vector o
 We apply global max-pooling across all nodes:
 
 $$
-h = \text{GlobalMaxPool}\left(\left\{ h_i^{(N)} \mid i \in V \right\}\right) \in \mathbb{R}^{256}
+h = \text{GlobalMaxPool}\left(\left\lbrace h_i^{(N)} \mid i \in V \right\rbrace\right) \in \mathbb{R}^{256}
 $$
 
 The choice of max as the aggregation function follows directly from its symmetry properties. As shown in Dynamic Graph CNN for Learning on Point Clouds [15], the output of an EdgeConv layer is invariant to permutation of the input because max is a symmetric function, and this holds for both the within-layer edge aggregation and the global max-pooling over node features. This matters here because DVS event streams are inherently unordered - the order in which events are placed into the graph structure should not affect the resulting window embedding.

@@ -170,6 +170,39 @@ following modifications are required to adapt them to DVS-Lip:
 
 ---
 
+## 5. Architecture
+The model processes a DVS event stream in three sequential stages: graph construction, spatial feature extraction, and temporal classification.
+
+### Stage 1 - Sliding window decomposition
+Each DVS-Lip sample (a single spoken word, 0.5–1 s) is split into T fixed-duration windows of Δt. This temporal segmentation strategy follows the approach of event-frame aggregation used in event-based lip reading [MTGA](https://arxiv.org/pdf/2404.11979), where the event stream is divided into discrete temporal segments to enable structured spatial processing. Each window contains a subset of the raw event stream and is processed independently by the shared GNN frontend.
+
+### Stage 2 - Graph construction (GraphGen)
+For each window, raw events (x, y, p) are treated as nodes in a graph. Edges are drawn between spatially proximate events using a radius-based rule: two nodes are connected if their Euclidean distance in the (x, y) plane is at most r. This initial graph captures local spatial structure within each window and serves as input to the first EdgeConv layer. Each node carries a 4-dimensional feature vector (x, y, t, p), where x, y ∈ [0, 127] are the pixel coordinates, t ∈ [0, 127] is the timestamp normalized to the spatial scale of the sensor, and p ∈ {−1, +1} is the event polarity. This graph construction strategy follows [DGCNN](https://arxiv.org/pdf/1801.07829), which demonstrates that building a kNN graph directly over point cloud data - and recomputing it dynamically at each layer - is more effective than fixed graph structures for learning local geometric features. The radius r is a hyperparameter controlling the density of the initial graph — larger r connects more distant events at the cost of noisier edges.
+
+### Stage 3 - Spatial feature extraction (DGCNN / EdgeConv)
+The graph passes through N = 3 stacked EdgeConv layers, as introduced in [DGCNN](https://arxiv.org/pdf/1801.07829). Each layer computes, for every node i and its current neighbors j:
+
+    h_i = max_{j ∈ N(i)}  MLP( [ h_i  ||  h_i − h_j ] )
+
+where || denotes concatenation and MLP is a shared two-layer perceptron with
+BatchNorm and ReLU. Crucially, the k-nearest-neighbor graph is **recomputed before
+each layer** in the current feature space - not in the original (x, y) coordinate
+space. This is the "dynamic" aspect of DGCNN: early layers find neighbors by spatial
+proximity, while deeper layers find neighbors by learned feature similarity,
+allowing the network to associate events from different lip regions that exhibit
+correlated dynamics.
+
+The per-layer output dimensions are:
+
+    Input           →     EdgeConv 1  →   EdgeConv 2   →  EdgeConv 3
+    R⁴ (x, y, t, p)       R⁶⁴             R¹²⁸            R²⁵⁶
+
+After the final EdgeConv layer, global max-pooling aggregates all node features
+into a single fixed-size window embedding:
+
+    h_i = GlobalMaxPool( {node features} )  ∈  R²⁵⁶
+
+
 ## 6th May
 
 

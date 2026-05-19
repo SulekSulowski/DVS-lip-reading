@@ -202,6 +202,90 @@ into a single fixed-size window embedding:
 
     h_i = GlobalMaxPool( {node features} )  ∈  R²⁵⁶
 
+## Stage 4 — Global Pooling (Graph Embedding)
+
+After the three EdgeConv layers, each node in the graph holds a feature vector of dimension $\mathbb{R}^{256}$. These per-node features need to be reduced to a single fixed-size representation of the entire temporal window, regardless of how many events it contains.
+We apply global max-pooling across all nodes:
+
+$$
+h = \text{GlobalMaxPool}\left(\left\{ h_i^{(N)} \mid i \in V \right\}\right) \in \mathbb{R}^{256}
+$$
+
+The choice of max as the aggregation function follows directly from its symmetry properties. As shown in Dynamic Graph CNN for Learning on Point Clouds [15], the output of an EdgeConv layer is invariant to permutation of the input because max is a symmetric function, and this holds for both the within-layer edge aggregation and the global max-pooling over node features. This matters here because DVS event streams are inherently unordered - the order in which events are placed into the graph structure should not affect the resulting window embedding.
+A closely related aggregation strategy appears in Space-Time Event Clouds for Gesture Recognition: From RGB Cameras to Event Cameras [11] for event-based gesture recognition, where a symmetric max-pooling function is applied to aggregate local features into a global descriptor of the point cloud, with the network learning to select informative points from the input set. Although that work uses PointNet rather than DGCNN as its backbone, the pooling principle is the same and directly motivates our design choice.
+It is also worth noting that this graph-based approach differs from standard frame-based methods in how spatial information is preserved prior to pooling. As discussed in the survey by Sun et al. [2], frame-based representations aggregate events into fixed-resolution maps before any learned processing, which discards part of the fine-grained temporal structure. In the proposed approach, the polarity p and spatial coordinates (x,y) are retained as node attributes throughout the EdgeConv stages and are only collapsed into a single vector at the pooling step.
+The resulting embedding
+
+$$
+h \in \mathbb{R}^{256}
+$$
+
+summarizes the spatial activity of the lip region within a single 20 ms window. It encodes the local geometric structure learned by the stacked EdgeConv layers, and does not depend on the number or ordering of events within that window.
+
+
+## Stage 5 — Sequence of Window Embeddings
+
+The \(T\) per-window embeddings produced by the global pooling step are arranged in chronological order to form a sequence:
+
+$$
+\mathbf{H} = [h_1, h_2, \ldots, h_T] \in \mathbb{R}^{T \times 256}
+$$
+
+This sequence serves as the interface between the spatial frontend (DGCNN) and the temporal backend (Bi-GRU). Each hth_t
+ht​ can be thought of as a compact description of lip geometry within one 20 ms window, analogous to the per-segment feature vectors produced by the frontend in MTGA [7], where the result embeddings of different temporal segments are fed into the Bi-GRU and Self-Attention layers to exploit global temporal information.
+
+The key difference in the approach proposed here is the nature of the individual embeddings. In MTGA, segment-level features are derived from a combination of event frames and voxel graph representations, where aggregating events into event frames inevitably leads to the loss of fine-grained temporal information within frames. In our pipeline, each $\mathbb{h_T}$​ is produced entirely from a graph-based representation so the within-window event structure is preserved through the (x,y) node coordinates and polarity attributes up until the pooling step.
+
+One practical consideration at this stage is the choice of window duration Δt and, consequently, the length T of the sequence. Shorter windows yield longer sequences and finer temporal resolution, but also increase the total number of graph construction and EdgeConv operations per sample. The value Δt=20 ms was chosen as a reasonable trade-off given typical utterance lengths in the DVS-Lip dataset (0.5–1 s), resulting in sequences of roughly T=25–50 embeddings per sample.
+
+
+## Stage 6 — Temporal Modeling (Bi-GRU)
+
+The sequence of window embeddings
+
+$$
+[h_1, h_2, \ldots, h_T]
+$$
+
+is passed into a bidirectional GRU with hidden size 256 per direction. The role of this module is to model how lip shape evolves over the duration of the utterance - something that cannot be inferred from any single window embedding in isolation.
+
+The use of a Bi-GRU as the temporal backend follows the design of MTGA [7], where a Bi-GRU is employed to aggregate temporal information, obtaining feature sequences that contain temporal context, motivated by its strong context learning and sequence modeling capabilities for word recognition. Bidirectionality is important here because in many cases the interpretation of lip movement at a given timestep depends on what comes both before and after it - a unidirectional model would miss context from the second half of the utterance when processing the first.
+
+The forward and backward hidden states are concatenated to produce an utterance-level representation:
+
+$$
+z =
+\left[
+\text{GRU}_{\text{fwd}}(h_T)
+\;\|\;
+\text{GRU}_{\text{bwd}}(h_1)
+\right]
+\in \mathbb{R}^{512}
+$$
+
+The outputs from the forward and backward GRU layers are combined by concatenation, resulting in a final output dimension that is twice the hidden size of a single GRU layer, which increases the model's capacity to represent sequence information as it retains distinct features from both directions. In our case this gives a 512-dimensional vector, since each direction uses a hidden size of 256.
+
+## Stage 7 — Classification
+
+A single linear layer projects the utterance representation $z$ onto the 100 output classes of the DVS-Lip vocabulary:
+
+$$
+\hat{y} = \text{softmax}(Wz + b) \in \mathbb{R}^{100}
+$$
+
+The network is trained using **cross-entropy loss**.
+
+
+# Summary
+
+| Stage | Module | Input | Output | Reference |
+|---|---|---|---|---|
+| Window Split | Sliding window ($\Delta t = 20\,\text{ms}$) | Event stream | $T$ windows | MTGA |
+| Graph Construction | GraphGen (radius, r) | Window events | Graph (V,E) | — |
+| Spatial Features   | EdgeConv ×3 (DGCNN)  | Graph         | Node features ∈ R²⁵⁶ | DGCNN |
+| Pooling | Global Max Pooling | $N \times \mathbb{R}^{256}$ | $\mathbb{R}^{256}$ | DGCNN |
+| Temporal Modeling | Bi-GRU ($hidden=256$) | $T \times \mathbb{R}^{256}$ | $\mathbb{R}^{512}$ | MTGA |
+| Classification | Linear + Softmax | $\mathbb{R}^{512}$ | $\mathbb{R}^{100}$ | MTGA |
 
 ## 6th May
 

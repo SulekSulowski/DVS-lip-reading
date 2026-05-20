@@ -307,3 +307,13 @@ The network is trained using **cross-entropy loss**.
 - Prepare architecture and description of whole pipeline - Miłosz Senator and Szczepan Tokarczyk
 - Implement solution in python - Jakub Sulowski
 
+---
+
+## 20th May
+
+
+### Plan for the Next Milestone
+- Prepare small dataset for checking correctness of our model - Jakub Sulowski
+- Run model validation, save and analyse results for different parameters - Miłosz Senator and Szczepan Tokarczyk
+- Set best parameters, fix model if incorrect - Jakub Sulowski
+

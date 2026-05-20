@@ -11,8 +11,11 @@ from tqdm import tqdm
 from utils import     GraphGen, EventLipReadingNet, \
                         draw_graph, load_data, create_dataloader, build_graph_sequence
 
+T = 50000
+R = 5
 
-def build_dataset(root, window_size=50000, r=5, device='cuda'):
+
+def build_dataset(root, window_size=T, r=R, device='cuda'):
     root = Path(root)
     
     # folder name → index (posortowane żeby było deterministyczne)
@@ -90,18 +93,18 @@ def evaluate(model, loader, criterion, device):
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Buduj datasety (to zajmie chwilę)
+
 train_samples, class_to_idx = build_dataset(os.path.join(os.getcwd(), "train"), device=device)
 test_samples, _             = build_dataset(os.path.join(os.getcwd(), "test"),  device=device)
 
 train_loader = create_dataloader(train_samples, batch_size=8, shuffle=True)
-test_loader  = create_dataloader(test_samples,  batch_size=1, shuffle=False)
+test_loader  = create_dataloader(test_samples,  batch_size=8, shuffle=False)
 
 model     = EventLipReadingNet(num_classes=100).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 criterion = nn.CrossEntropyLoss()
 
-for epoch in range(1):
+for epoch in range(30):
     train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, criterion, device)
     test_loss,  test_acc  = evaluate(model, test_loader, criterion, device)
 

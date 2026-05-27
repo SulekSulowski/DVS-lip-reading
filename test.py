@@ -437,7 +437,7 @@ def run_local_param_sweep(
                 window_size=window_size,
                 r=r,
                 device=device,
-                files_per_class=10,
+                files_per_class=145,
             )
             test_samples = build_limited_dataset(
                 test_root,
@@ -445,7 +445,7 @@ def run_local_param_sweep(
                 window_size=window_size,
                 r=r,
                 device=device,
-                files_per_class=5,
+                files_per_class=45,
             )
 
             if len(train_samples) == 0 or len(test_samples) == 0:
@@ -604,9 +604,9 @@ if __name__ == "__main__":
         test_root="test",
         window_sizes=[25000, 50000, 75000, 100000],
         r_values=[3, 5, 8],
-        epochs=10,
+        epochs=15,
         batch_size=8,
-        classes_limit=2,
+        classes_limit=5,
         k=8,
         device=DEVICE,
     )

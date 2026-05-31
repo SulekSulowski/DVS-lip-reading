@@ -189,30 +189,31 @@ class DGCNN(nn.Module):
         self.conv1 = EdgeConv(
             nn.Sequential(
                 nn.Linear(2 * 4, 64),
+                nn.BatchNorm1d(64),
                 nn.ReLU(),
-                nn.Linear(64, 64)
-            ),
-            aggr='max'
+                nn.Linear(64, 64),
+                nn.BatchNorm1d(64),
+            ), aggr='max'
         )
 
-        # R^64 -> R^128
         self.conv2 = EdgeConv(
             nn.Sequential(
                 nn.Linear(2 * 64, 128),
+                nn.BatchNorm1d(128),
                 nn.ReLU(),
-                nn.Linear(128, 128)
-            ),
-            aggr='max'
+                nn.Linear(128, 128),
+                nn.BatchNorm1d(128),
+            ), aggr='max'
         )
 
-        # R^128 -> R^256
         self.conv3 = EdgeConv(
             nn.Sequential(
                 nn.Linear(2 * 128, 256),
+                nn.BatchNorm1d(256),
                 nn.ReLU(),
-                nn.Linear(256, 256)
-            ),
-            aggr='max'
+                nn.Linear(256, 256),
+                nn.BatchNorm1d(256),
+            ), aggr='max'
         )
 
     def forward(self, data):
@@ -454,11 +455,11 @@ class GraphGen(Module):
         pol = torch.tensor(self.feat_list, dtype=torch.float32, device=self.device).unsqueeze(1)  # [N, 1]
 
         # normalizacja t do skali [0, 128]
-        t_col = pos[:, 2]
+        xy = pos[:, :2] / 127.0          # x, y -> [0, 1]
+        t_col = pos[:, 2:3]
         t_min, t_max = t_col.min(), t_col.max()
-        pos[:, 2] = (t_col - t_min) / (t_max - t_min + 1e-8) * 127
-
-        x = torch.cat([pos, pol], dim=1)  # [N, 4] — gotowy tensor (x, y, t̃, p)
+        t_norm = (t_col - t_min) / (t_max - t_min + 1e-8)  # t -> [0, 1]
+        x = torch.cat([xy, t_norm, pol], dim=1)              # [N, 4]
 
         edges = torch.tensor(edge_list_dedup, dtype=torch.long, device=self.device) \
             if self.edge_list else torch.empty((0, 2), dtype=torch.long, device=self.device)

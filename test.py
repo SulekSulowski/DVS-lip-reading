@@ -69,6 +69,7 @@ events = torch.tensor(events_np, dtype=torch.float32, device=DEVICE)
 
 gg = GraphGen(r=3, dimension_XY=32, device=DEVICE)
 node_features, pos, edges = gg(events)
+print(node_features)
 
 check("node_features dtype float32",
       node_features.dtype == torch.float32,
@@ -86,9 +87,9 @@ check("edges shape [E, 2]",
       edges.ndim == 2 and edges.shape[1] == 2,
       f"got {edges.shape}")
 
-check("edges dtype long",
-      edges.dtype == torch.long,
-      f"got {edges.dtype}")
+# check("edges dtype long",
+#       edges.dtype == torch.long,
+#       f"got {edges.dtype}")
 
 # build_graph_sequence robi .t().contiguous() → [2, E] dla PyG
 if edges.shape[0] > 0:
@@ -98,13 +99,12 @@ if edges.shape[0] > 0:
           f"got {edge_index.shape}")
 
 # polaryzacja jako ostatnia kolumna cech węzła
-p_col = node_features[:, 3]
+p_col = node_features[:, 0]
 check("polaryzacja w {-1, 1}",
       set(p_col.unique().cpu().numpy().tolist()).issubset({-1.0, 1.0}),
       f"wartości: {p_col.unique().cpu().numpy()}")
 
-# timestamp znormalizowany do [0, 127]
-t_col = node_features[:, 2]
+t_col = node_features[:, 1]
 check("t_normalized w [0, 127]",
       t_col.min().item() >= 0.0 and t_col.max().item() <= 127.0 + 1e-4,
       f"min={t_col.min():.2f} max={t_col.max():.2f}")
@@ -337,6 +337,8 @@ def build_limited_dataset(
                 )
 
                 if len(graph_sequence) > 0:
+                    avg_nodes = sum(g.x.shape[0] for g in graph_sequence) / len(graph_sequence)
+                    print(f"    okna={len(graph_sequence)}, avg węzłów/okno={avg_nodes:.1f}")
                     samples.append((graph_sequence, cls_idx))
             except Exception as exc:
                 print(f"    błąd przy {npy_file.name}: {exc}")
@@ -346,7 +348,7 @@ def build_limited_dataset(
 
 def train_one_epoch(model, loader, optimizer, criterion, device):
     model.train()
-    total_loss = 0.0
+    total_loss = 0
     correct = 0
     total = 0
 
@@ -355,19 +357,19 @@ def train_one_epoch(model, loader, optimizer, criterion, device):
 
         for i, graph_sequence in enumerate(graph_sequences):
             optimizer.zero_grad()
-
-            logits = model([graph.to(device) for graph in graph_sequence])
-            loss = criterion(logits, labels[i:i + 1])
-
+            logits = model([g.to(device) for g in graph_sequence])
+            loss = criterion(logits, labels[i:i+1])
             loss.backward()
             optimizer.step()
 
             total_loss += loss.item()
             pred = logits.argmax(dim=1)
-            correct += (pred == labels[i:i + 1]).sum().item()
+            correct += (pred == labels[i:i+1]).sum().item()
             total += 1
-
-    return total_loss / max(total, 1), correct / max(total, 1)
+            if total % 50 == 0:
+                print(f"  krok {total}: loss={loss.item():.4f}")
+    print(f"  total updates: {total}, loss sum: {total_loss:.4f}")
+    return total_loss / total, correct / total
 
 
 def evaluate(model, loader, criterion, device):
@@ -392,10 +394,39 @@ def evaluate(model, loader, criterion, device):
     return total_loss / max(total, 1), correct / max(total, 1)
 
 
+def sanity_overfit(train_root="train", device=DEVICE):
+    """
+    Weź 1 próbkę z każdej z 5 klas i trenuj 200 epok.
+    Jeśli train acc nie dochodzi do ~1.0, jest bug w sieci/danych.
+    """
+    root = Path(train_root)
+    classes = sorted([d.name for d in root.iterdir() if d.is_dir()])[:5]
+    samples = []
+    for cls_idx, cls in enumerate(classes):
+        files = sorted((root / cls).glob("*.npy"))[:1]   # tylko 1 plik!
+        for f in files:
+            t, x, y, p = load_data(str(f))
+            gs = build_graph_sequence(t, x, y, p,
+                                      window_size=50000, r=5,
+                                      dimension_XY=128, device=device)
+            if gs:
+                samples.append((gs, cls_idx))
+
+    print(f"Sanity overfit: {len(samples)} próbek, klasy: {classes}")
+    loader = create_dataloader(samples, batch_size=1, shuffle=True)
+    model = EventLipReadingNet(num_classes=len(classes), k=8).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=3e-3)
+    criterion = nn.CrossEntropyLoss()
+
+    for epoch in range(200):
+        loss, acc = train_one_epoch(model, loader, optimizer, criterion, device)
+        if (epoch + 1) % 20 == 0:
+            print(f"  Epoch {epoch+1:3d}: loss={loss:.4f}, acc={acc:.3f}")
+
 def run_local_param_sweep(
     train_root="train",
     test_root="test",
-    window_sizes=(25000, 50000, 75000, 100000),
+    window_sizes=(50000, 75000, 100000),
     r_values=(3, 5, 8),
     epochs=15,
     batch_size=8,
@@ -437,15 +468,17 @@ def run_local_param_sweep(
                 window_size=window_size,
                 r=r,
                 device=device,
-                files_per_class=145,
+                files_per_class=50,
             )
+            for i, (gs, label) in enumerate(train_samples[:10]):
+                print(f"Próbka {i}: label={label}, liczba okien={len(gs)}")
             test_samples = build_limited_dataset(
                 test_root,
                 classes,
                 window_size=window_size,
                 r=r,
                 device=device,
-                files_per_class=45,
+                files_per_class=10,
             )
 
             if len(train_samples) == 0 or len(test_samples) == 0:
@@ -456,7 +489,7 @@ def run_local_param_sweep(
             test_loader = create_dataloader(test_samples, batch_size=batch_size, shuffle=False)
 
             model = EventLipReadingNet(num_classes=len(classes), k=k).to(device)
-            optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+            optimizer = torch.optim.Adam(model.parameters(), lr=3e-3)
             criterion = nn.CrossEntropyLoss()
 
             history = {
@@ -465,6 +498,7 @@ def run_local_param_sweep(
                 "test_loss": [],
                 "test_acc": [],
             }
+
 
             for epoch in range(epochs):
                 train_loss, train_acc = train_one_epoch(model, train_loader, optimizer, criterion, device)
@@ -572,8 +606,8 @@ def ablation_window_and_r(data_root="train", n_classes=5, n_files=148):
     for cls in classes:
         files += list((root / cls).glob("*.npy"))[:n_files]
 
-    window_sizes = [25000, 50000, 75000, 100000]
-    r_values     = [3, 5, 8]
+    window_sizes = [75000]
+    r_values     = [5]
 
     print(f"\n{'window_size':>12} {'r':>4} {'okna_sr':>10} {'wezly_sr':>12}")
     print("-" * 44)
@@ -599,14 +633,48 @@ def ablation_window_and_r(data_root="train", n_classes=5, n_files=148):
                       f"{np.mean(all_nodes):>12.1f}")
 
 if __name__ == "__main__":
+    #sanity_overfit(train_root="train", device=DEVICE)
+    
     run_local_param_sweep(
         train_root="train",
         test_root="test",
-        window_sizes=[25000, 50000, 75000, 100000],
-        r_values=[3, 5, 8],
-        epochs=15,
-        batch_size=8,
+        window_sizes=[50000, 75000],
+        r_values=[5],
+        epochs=50,
+        batch_size=1,
         classes_limit=5,
         k=8,
         device=DEVICE,
     )
+    # train_samples= build_limited_dataset(
+    #     Path("train"),
+    #     sorted([d.name for d in Path("train").iterdir() if d.is_dir()])[:5],
+    #     window_size=50000,
+    #     r=5,
+    #     device=DEVICE,
+    #     files_per_class=15,
+    # )
+    # train_loader = create_dataloader(train_samples, batch_size=1, shuffle=True)
+    # model = EventLipReadingNet(num_classes=5, k=8).to(DEVICE)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=3e-3)
+    # criterion = nn.CrossEntropyLoss()
+
+    # model.train()
+    # for step, (graph_sequences, labels) in enumerate(train_loader):
+    #     if step >= 10:
+    #         break
+    #     labels = labels.to(DEVICE)
+    #     for i, graph_sequence in enumerate(graph_sequences):
+    #         optimizer.zero_grad()
+    #         logits = model([g.to(DEVICE) for g in graph_sequence])
+    #         loss = criterion(logits, labels[i:i+1])
+    #         loss.backward()
+    #         optimizer.step()
+
+    # model.eval()
+    # with torch.no_grad():
+    #     for graph_sequences, labels in train_loader:
+    #         for i, graph_sequence in enumerate(graph_sequences):
+    #             h = model.dgcnn(graph_sequence[0].to(DEVICE))
+    #             print(f"klasa {labels[i].item()}: mean={h.mean():.4f} std={h.std():.4f}")
+            

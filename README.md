@@ -317,3 +317,10 @@ The network is trained using **cross-entropy loss**.
 - Run model validation, save and analyse results for different parameters - Miłosz Senator and Szczepan Tokarczyk
 - Set best parameters, fix model if incorrect - Jakub Sulowski
 
+---
+
+## 27th May
+
+
+### Plan for the Next Milestone
+- Debug, test and fix model architecture - why model is not training itself? - think about possible soultions - all team members

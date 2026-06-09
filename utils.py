@@ -185,32 +185,35 @@ class DGCNN(nn.Module):
 
         self.k = k
 
-        # R^4 -> R^64
         self.conv1 = EdgeConv(
             nn.Sequential(
                 nn.Linear(2 * 4, 64),
+                nn.BatchNorm1d(64),
                 nn.ReLU(),
-                nn.Linear(64, 64)
+                nn.Linear(64, 64),
+                nn.BatchNorm1d(64),
             ),
             aggr='max'
         )
 
-        # R^64 -> R^128
         self.conv2 = EdgeConv(
             nn.Sequential(
                 nn.Linear(2 * 64, 128),
+                nn.BatchNorm1d(128),
                 nn.ReLU(),
-                nn.Linear(128, 128)
+                nn.Linear(128, 128),
+                nn.BatchNorm1d(128),
             ),
             aggr='max'
         )
 
-        # R^128 -> R^256
         self.conv3 = EdgeConv(
             nn.Sequential(
                 nn.Linear(2 * 128, 256),
+                nn.BatchNorm1d(256),
                 nn.ReLU(),
-                nn.Linear(256, 256)
+                nn.Linear(256, 256),
+                nn.BatchNorm1d(256),
             ),
             aggr='max'
         )

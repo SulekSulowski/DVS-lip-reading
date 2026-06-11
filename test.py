@@ -13,7 +13,7 @@ import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
 from torch_geometric.data import Data
-
+from torch.utils.data import TensorDataset, DataLoader as TorchDataLoader
 # ── importuj z twojego pliku utils ──────────────────────────────────────────
 from utils import (
     GraphGen,
@@ -24,7 +24,7 @@ from utils import (
     create_dataloader,
     load_data,
 )
-
+from MLP import main_MLP
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Device: {DEVICE}\n")
 
@@ -397,7 +397,7 @@ def run_local_param_sweep(
     test_root="test",
     window_sizes=(25000, 50000, 75000, 100000),
     r_values=(3, 5, 8),
-    epochs=15,
+    epochs=30,
     batch_size=8,
     classes_limit=5,
     k=8,
@@ -439,6 +439,14 @@ def run_local_param_sweep(
                 device=device,
                 files_per_class=145,
             )
+
+            model_diag = EventLipReadingNet(num_classes=len(classes), k=k).to(device)
+            model_diag.eval()
+            with torch.no_grad():
+                for gs, label in train_samples:
+                    h = model_diag.dgcnn(gs[0].to(device))
+                    print(f"klasa {label}: mean={h.mean():.4f}, std={h.std():.4f}")
+
             test_samples = build_limited_dataset(
                 test_root,
                 classes,
@@ -598,15 +606,69 @@ def ablation_window_and_r(data_root="train", n_classes=5, n_files=148):
                 print(f"{ws:>12} {r:>4} {np.mean(all_windows):>10.1f} "
                       f"{np.mean(all_nodes):>12.1f}")
 
+
+def sanity_overfit(train_root="train", device=DEVICE, n_files=1):
+    root = Path(train_root)
+    classes = sorted([d.name for d in root.iterdir() if d.is_dir()])[:5]
+    samples = []
+    for cls_idx, cls in enumerate(classes):
+        files = sorted((root / cls).glob("*.npy"))[:n_files]
+        for f in files:
+            t, x, y, p = load_data(str(f))
+            gs = build_graph_sequence(t, x, y, p,
+                                      window_size=50000, r=5,
+                                      dimension_XY=128, device=device)
+            if gs:
+                samples.append((gs, cls_idx))
+
+    print(f"\nn_files={n_files}: {len(samples)} próbek")
+    loader = create_dataloader(samples, batch_size=1, shuffle=True)
+    model = EventLipReadingNet(num_classes=len(classes), k=8).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    criterion = nn.CrossEntropyLoss()
+
+    history_acc = []
+    history_loss = []
+
+    for epoch in range(200):
+        loss, acc = train_one_epoch(model, loader, optimizer, criterion, device)
+        history_acc.append(acc)
+        history_loss.append(loss)
+        if (epoch + 1) % 10 == 0:
+            print(f"  Epoch {epoch+1:3d}: loss={loss:.4f}, acc={acc:.3f}")
+    
+    plots_dir = Path("plots")
+    plots_dir.mkdir(exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+
+    ax.plot(range(1, 201), history_acc, label="train acc", color="blue")
+    ax.plot(range(1, 201), history_loss, label="train loss", color="red")
+    ax.set_title(f"Sanity overfit (n_files={n_files})")
+    ax.set_xlabel("Epoch")
+    ax.set_ylim(0.0, max(max(history_loss), 1.0) + 0.1)
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+
+    fig.tight_layout()
+    plot_path = plots_dir / f"sanity_overfit_n{n_files}.png"
+    fig.savefig(plot_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  Zapisano: {plot_path}")
+
 if __name__ == "__main__":
+
+    # for n_files in [1]:
+    #     sanity_overfit(train_root="train", device=DEVICE, n_files=n_files)
     run_local_param_sweep(
         train_root="train",
         test_root="test",
-        window_sizes=[25000, 50000, 75000, 100000],
-        r_values=[3, 5, 8],
-        epochs=15,
+        window_sizes=[100000],
+        r_values=[8],
+        epochs=30,
         batch_size=8,
         classes_limit=5,
         k=8,
         device=DEVICE,
     )
+    # main_MLP()

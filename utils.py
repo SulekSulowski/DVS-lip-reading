@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import math
 from tqdm import tqdm
 from torch_geometric.nn import EdgeConv
-from torch_geometric.nn import global_max_pool
+from torch_geometric.nn import global_max_pool, avg_pool
 from torch_geometric.nn.pool import knn_graph
 from torch_geometric.data import Data
 from torch.utils.data import Dataset, DataLoader
@@ -343,7 +343,6 @@ class EventLipReadingNet(nn.Module):
 
             nn.ReLU(),
 
-            nn.Dropout(0.3),
 
             nn.Linear(256, num_classes)
         )

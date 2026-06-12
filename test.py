@@ -8,11 +8,13 @@ Nie wymaga datasetu DVS-Lip — wszystkie testy używają danych syntetycznych.
 Na końcu jest sekcja do szybkiego testu na małym wycinku datasetu.
 """
 
+from PointNet import PointNetLipReading, run_pointnet
+
 import torch
 import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
-from torch_geometric.data import Data
+
 from torch.utils.data import TensorDataset, DataLoader as TorchDataLoader
 # ── importuj z twojego pliku utils ──────────────────────────────────────────
 from utils import (
@@ -437,7 +439,7 @@ def run_local_param_sweep(
                 window_size=window_size,
                 r=r,
                 device=device,
-                files_per_class=145,
+                files_per_class=10,
             )
 
             model_diag = EventLipReadingNet(num_classes=len(classes), k=k).to(device)
@@ -453,7 +455,7 @@ def run_local_param_sweep(
                 window_size=window_size,
                 r=r,
                 device=device,
-                files_per_class=45,
+                files_per_class=1,
             )
 
             if len(train_samples) == 0 or len(test_samples) == 0:
@@ -658,13 +660,13 @@ def sanity_overfit(train_root="train", device=DEVICE, n_files=1):
 
 if __name__ == "__main__":
 
-    # for n_files in [1]:
+    # for n_files in [6]:
     #     sanity_overfit(train_root="train", device=DEVICE, n_files=n_files)
     run_local_param_sweep(
         train_root="train",
         test_root="test",
-        window_sizes=[100000],
-        r_values=[8],
+        window_sizes=[50000],
+        r_values=[5],
         epochs=30,
         batch_size=8,
         classes_limit=5,
@@ -672,3 +674,13 @@ if __name__ == "__main__":
         device=DEVICE,
     )
     # main_MLP()
+    # run_pointnet(
+    #     train_root="train",
+    #     test_root="test",
+    #     window_size=50000,
+    #     r=5,
+    #     epochs=50,
+    #     files_per_class=145,
+    #     classes_limit=5,
+    #     device=DEVICE,
+    # )
